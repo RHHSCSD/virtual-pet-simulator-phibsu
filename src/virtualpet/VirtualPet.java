@@ -14,6 +14,12 @@ import javax.swing.JOptionPane;
  */
 public class VirtualPet {
 
+    static int MAX_HEALTH;
+    static int MAX_FOOD;
+    static int MAX_ENERGY;
+    final static int LOGIN_ATTEMPTS = 3;
+    static int money = 0;
+
     /**
      * @param args the command line arguments
      */
@@ -32,14 +38,20 @@ public class VirtualPet {
         boolean chooseName = true;      // default true
         boolean inPlay = false;          // default false
         boolean interactMenu = false;   // default false
+        boolean actionMenu = false;     // default false
+        boolean play = false;
+        boolean feed = false;
+        boolean groom = false;
+        int actionMenuChoice;
+        int interactMenuChoice;
+        int gameMenuChoice;
+
+        boolean gameMenu = false;   //default false
         int petChoice;
         int generateName;
         String petName = "";
-        int money = 0;
 
         //minigames
-        int interactMenuChoice;
-
         //1
         boolean minigame1 = false;
         final int MAX_GUESSES1 = 6;
@@ -54,11 +66,14 @@ public class VirtualPet {
         final String PASSWORD = "toto";
         final String CONSONANT = "BCDFGHJKLMNPQRSTVWXYZ";
         final String VOWEL = "AEIOU";
-        final int MAXHEALTH = rn.nextInt(19) + 1;
-        final int MAXFOOD = rn.nextInt(20 - MAXHEALTH) + 1;
-        final int MAXENERGY = 20 - MAXHEALTH - MAXFOOD;
-        final int LOGIN_ATTEMPTS = 3;
-
+        MAX_HEALTH = rn.nextInt(19) + 1;
+        MAX_FOOD = rn.nextInt(20 - MAX_HEALTH) + 1;
+        MAX_ENERGY = 20 - MAX_HEALTH - MAX_FOOD;
+        
+        int currentEnergy = MAX_ENERGY;
+        int currentFood = MAX_FOOD;
+        int currentHealth = MAX_HEALTH;
+        
         // splash screen
         System.out.println("           boing         boing         boing              ");
         System.out.println(" o-o           . - .         . - .         . - .          ");
@@ -70,17 +85,17 @@ public class VirtualPet {
         System.out.println("WELCOME");
 
         //login
-        inPlay = loginMenu(USER, PASSWORD, LOGIN_ATTEMPTS);
-        
+        inPlay = loginMenu(USER, PASSWORD);
+
         while (inPlay) {
 
             // start menu
             while (mainMenu == true) {
                 if (startMenu) {
-                    System.out.println("1. Start\n2. Instructions\n3. Exit");
+                    System.out.println("\n1. Start\n2. Instructions\n3. Exit");
 
                 } else {
-                    System.out.println("1. Play/Interact\n2. Instructions\n3. Exit");
+                    System.out.println("\n1. Play/Interact\n2. Instructions\n3. Exit");
 
                 }
                 menuChoice = kb.nextInt();
@@ -92,7 +107,7 @@ public class VirtualPet {
                             choosePet = true;
                             startMenu = false;
                         } else {
-                            interactMenu = true;
+                            actionMenu = true;
                         }
                         mainMenu = false;
                         break;
@@ -131,8 +146,6 @@ public class VirtualPet {
 
             // name choice
             if (chooseName) {
-                System.out.println("Would you like to generate a random name? y/n ");
-                kb.nextLine();
                 generateName = JOptionPane.showConfirmDialog(null, "Would you like to generate a random name?", "almost there...", JOptionPane.YES_NO_OPTION);
                 switch (generateName) {
                     case 1:
@@ -174,20 +187,61 @@ public class VirtualPet {
 
             }
 
-            while (interactMenu) {
-                System.out.println("Choose a game to play: \n1. Number guessing\n2. Matching\n3. Exit");
-                interactMenuChoice = kb.nextInt();
-                switch (interactMenuChoice) {
+
+            if (actionMenu) {
+                System.out.println("\nWould you like to interact with your pet or play a game?\n1. Interact\n2. Game\n3. Back");
+                actionMenuChoice = kb.nextInt();
+                switch (actionMenuChoice) {
                     case 1:
-                        minigame1 = true;
+                        interactMenu = true;
                         break;
                     case 2:
-                        minigame2 = true;
+                        gameMenu = true;
                         break;
                     default:
                         mainMenu = true;
                 }
+                actionMenu = false;
+            }
+
+            if (interactMenu) {
+                System.out.println("\nChoose an activity:\n1. Play\n2. Feed\n3. Groom\n4. Back");
+                interactMenuChoice = kb.nextInt();
+                switch (interactMenuChoice) {
+                    case 1:
+                        play = true;
+                        mainMenu = true;
+                        break;
+                    case 2:
+                        feed = true;
+                        mainMenu = true;
+                        break;
+                    case 3:
+                        groom = true;
+                        mainMenu = true;
+                        break;
+                    default:
+                        actionMenu = true;
+                }
                 interactMenu = false;
+            }
+
+            if (gameMenu) {
+                System.out.println("\nChoose a game to play: \n1. Number guessing\n2. Matching\n3. Back");
+                gameMenuChoice = kb.nextInt();
+                switch (gameMenuChoice) {
+                    case 1:
+                        minigame1 = true;
+                        mainMenu = true;
+                        break;
+                    case 2:
+                        minigame2 = true;
+                        mainMenu = true;
+                        break;
+                    default:
+                        actionMenu = true;
+                }
+                gameMenu = false;
             }
 
             // first minigame
@@ -195,17 +249,28 @@ public class VirtualPet {
                 money += guessingGame(MAX_GUESSES1);
                 minigame1 = false;
                 mainMenu = true;
-            }
-
-            if (minigame2) {
+            } else if (minigame2) {
                 money = matchingGame(MAX_GUESSES2, SHUFFLED_LENGTH);
                 minigame2 = false;
                 mainMenu = true;
             }
+            
+            //interactions
+            
+            if (play) {
+                currentEnergy += play(currentEnergy);
+                play = false;
+            } else if (feed) {
+                currentFood += feed(currentFood);
+                feed = false;
+            } else if (groom) {
+                currentHealth += groom(currentHealth);
+                groom = false;
+            }
         }
     }
 
-    public static boolean loginMenu(String USER, String PASSWORD, int LOGIN_ATTEMPTS) {
+    public static boolean loginMenu(String USER, String PASSWORD) {
         String userInput;
         String passwordInput;
         boolean login = false;
@@ -281,7 +346,7 @@ public class VirtualPet {
             }
         }
         //the game
-        for (int k = MAX_GUESSES; k > 0 ; k--) {
+        for (int k = MAX_GUESSES; k > 0; k--) {
             if (!win) {
                 //guessing
                 System.out.print("\nGuess (seperate with space): ");
@@ -326,13 +391,12 @@ public class VirtualPet {
                             System.out.println(gameStatus);
                         }
                     }
-                    
+
                     //print 'X' once for each letter not found
                     if (gameStatus.length() == i) {
-                        if (i == index1 || i == index2){
-                        gameStatus += shuffled.charAt(i);
-                    }
-                        else{
+                        if (i == index1 || i == index2) {
+                            gameStatus += shuffled.charAt(i);
+                        } else {
                             gameStatus += "X";
                         }
                     }
@@ -347,7 +411,45 @@ public class VirtualPet {
                 }
             }
         }
-
+        System.out.println("");
         return money;
     }
+
+    public static int play(int energy) {
+        final int COST = 3;
+        money -= COST;
+        int energyGained = 0;
+        if (energy < MAX_ENERGY && money > COST) {
+            energyGained = 1;
+            System.out.println("You buy your pet a toy!\n+" + energyGained + " Energy\n -" + COST + " coins");
+        }
+        else if (money < COST){
+            System.out.println("ur too broke");
+        }        
+        return energyGained;
+    }
+
+    public static int feed(int food) {
+        final int COST = 3;
+        money -= COST;
+        int foodGained = 0;
+        if (food < MAX_FOOD && money > COST) {
+            foodGained = 1;
+            System.out.println("You feed your pet!\n+" + foodGained + " Energy\n -" + COST + " coins");
+        }
+        else if (money < COST){
+            System.out.println("ur too broke");
+        }
+        return foodGained;
+    }
+
+    public static int groom(int health) {
+        int healthGained = 0;
+        if (health < MAX_HEALTH) {
+            healthGained = 1;
+        }
+        System.out.println("You groom your pet!\n+" + healthGained + " Health");
+        return healthGained;
+    }
+
 }
