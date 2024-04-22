@@ -7,6 +7,8 @@ package virtualpet;
 import java.util.Scanner;
 import java.util.Random;
 import javax.swing.JOptionPane;
+import java.io.*;
+import java.lang.Exception;
 
 /**
  *
@@ -14,11 +16,13 @@ import javax.swing.JOptionPane;
  */
 public class VirtualPet {
 
-    static int MAX_HEALTH;
-    static int MAX_FOOD;
-    static int MAX_ENERGY;
+   
     final static int LOGIN_ATTEMPTS = 3;
     static int money = 0;
+    //1. energy 2. food 3. health
+    static int[] maxStats = new int[3];
+    static int[] interactionCount = new int[3];
+    static boolean inPlay = false;
 
     /**
      * @param args the command line arguments
@@ -36,7 +40,6 @@ public class VirtualPet {
         boolean mainMenu = true;        // default true
         boolean choosePet = false;      // default false
         boolean chooseName = true;      // default true
-        boolean inPlay = false;          // default false
         boolean interactMenu = false;   // default false
         boolean actionMenu = false;     // default false
         boolean play = false;
@@ -66,13 +69,13 @@ public class VirtualPet {
         final String PASSWORD = "toto";
         final String CONSONANT = "BCDFGHJKLMNPQRSTVWXYZ";
         final String VOWEL = "AEIOU";
-        MAX_HEALTH = rn.nextInt(19) + 1;
-        MAX_FOOD = rn.nextInt(20 - MAX_HEALTH) + 1;
-        MAX_ENERGY = 20 - MAX_HEALTH - MAX_FOOD;
         
-        int currentEnergy = MAX_ENERGY;
-        int currentFood = MAX_FOOD;
-        int currentHealth = MAX_HEALTH;
+         
+        maxStats[0] = rn.nextInt(19) + 1;
+        maxStats[1] = rn.nextInt(20 - maxStats[0]) + 1;
+        maxStats[2] = 20 - maxStats[1] - maxStats[0];
+        
+        int[] currentStats = new int[3];
         
         // splash screen
         System.out.println("           boing         boing         boing              ");
@@ -85,7 +88,7 @@ public class VirtualPet {
         System.out.println("WELCOME");
 
         //login
-        inPlay = loginMenu(USER, PASSWORD);
+        String username = loginMenu();
 
         while (inPlay) {
 
@@ -258,40 +261,87 @@ public class VirtualPet {
             //interactions
             
             if (play) {
-                currentEnergy += play(currentEnergy);
+                play(currentStats);
                 play = false;
             } else if (feed) {
-                currentFood += feed(currentFood);
+                feed(currentStats);
                 feed = false;
             } else if (groom) {
-                currentHealth += groom(currentHealth);
+                groom(currentStats);
                 groom = false;
             }
         }
     }
 
-    public static boolean loginMenu(String USER, String PASSWORD) {
+    public static void exit(String user){
+        try{
+        File info = new File(user+".dat");
+        PrintWriter pw = new PrintWriter(info);
+        pw.println(); 
+        
+        } catch(Exception e){
+            System.out.println("uhoh");
+        }
+        System.exit(0);
+        
+    }
+    
+    public static String loginMenu() {
         String userInput;
         String passwordInput;
-        boolean login = false;
-
+        String user = "";
+        File info;
+        PrintWriter pw;
+        
         for (int i = 1; i <= LOGIN_ATTEMPTS; i++) {
-            if (login) {
+            if (!user.equals("")) {
                 i = LOGIN_ATTEMPTS + 1;
             } else {
                 userInput = JOptionPane.showInputDialog("Username: ");
-                passwordInput = JOptionPane.showInputDialog("Password: ");
-                if (userInput.equals(USER) && passwordInput.equals(PASSWORD)) {
-                    login = true;
-                    JOptionPane.showMessageDialog(null, "Success!", ":)", JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    JOptionPane.showMessageDialog(null, "Invalid credentials!\n" + (LOGIN_ATTEMPTS - i) + " attempts remaining", ":(", JOptionPane.WARNING_MESSAGE);
-                    System.out.println(LOGIN_ATTEMPTS - i + " attempts remaining");
+                userInput = userInput.toLowerCase();
+                info = new File(userInput+".dat");
+                
+                //check if file exists
+                if (info.exists()){
+                    //if it does, check for password from the file
+                    passwordInput = JOptionPane.showInputDialog("Password: ");
+                    try{
+                        Scanner s = new Scanner(info);
 
+                        if (s.nextLine().equals(passwordInput)){
+                            //upon login, load all the information
+                            user = userInput;
+                            inPlay = true;
+                            JOptionPane.showMessageDialog(null, "Success!", ":)", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                        else {
+                        JOptionPane.showMessageDialog(null, "Invalid credentials!\n" + (LOGIN_ATTEMPTS - i) + " attempts remaining", ":(", JOptionPane.WARNING_MESSAGE);
+                        System.out.println(LOGIN_ATTEMPTS - i + " attempts remaining");
+                        }
+                        s.close();
+                    } catch(Exception e) {
+                        JOptionPane.showMessageDialog(null, "Something went wrong...", ":(", JOptionPane.WARNING_MESSAGE);
+                        return "";
+                    }
                 }
+                //otherwise, make a new file
+                else{
+                    try{
+                    pw = new PrintWriter(info);
+                    passwordInput = JOptionPane.showInputDialog("Create a new password: ");
+                    pw.println(passwordInput);
+                    pw.close();
+                    
+                    } catch(Exception e){
+                        JOptionPane.showMessageDialog(null, "Something went wrong...", ":(", JOptionPane.WARNING_MESSAGE);
+                        return "";
+                    }
+                }
+                
+                
             }
         }
-        return login;
+        return user;
     }
 
     public static int guessingGame(int MAX_GUESSES) {
@@ -415,41 +465,44 @@ public class VirtualPet {
         return money;
     }
 
-    public static int play(int energy) {
+    public static void play(int[] stats) {
         final int COST = 3;
         money -= COST;
         int energyGained = 0;
-        if (energy < MAX_ENERGY && money > COST) {
+        if (stats[0] < maxStats[0] && money > COST) {
             energyGained = 1;
+            stats[0] += 1;
+            interactionCount[0] += 1;
             System.out.println("You buy your pet a toy!\n+" + energyGained + " Energy\n -" + COST + " coins");
         }
         else if (money < COST){
             System.out.println("ur too broke");
         }        
-        return energyGained;
     }
 
-    public static int feed(int food) {
+    public static void feed(int[] stats) {
         final int COST = 3;
         money -= COST;
         int foodGained = 0;
-        if (food < MAX_FOOD && money > COST) {
-            foodGained = 1;
+        if (stats[1] < maxStats[1] && money > COST) {
+            stats[1] += 1;
+            interactionCount[1] += 1;
             System.out.println("You feed your pet!\n+" + foodGained + " Energy\n -" + COST + " coins");
         }
         else if (money < COST){
             System.out.println("ur too broke");
         }
-        return foodGained;
     }
 
-    public static int groom(int health) {
+    public static void groom(int[] stats) {
         int healthGained = 0;
-        if (health < MAX_HEALTH) {
+        if (stats[2] < maxStats[2]) {
+            stats[2] += 1;
+            interactionCount[2] += 1;
             healthGained = 1;
         }
         System.out.println("You groom your pet!\n+" + healthGained + " Health");
-        return healthGained;
     }
 
+    
 }
