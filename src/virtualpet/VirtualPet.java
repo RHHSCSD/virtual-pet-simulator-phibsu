@@ -9,6 +9,7 @@ import java.util.Random;
 import javax.swing.JOptionPane;
 import java.io.*;
 import java.lang.Exception;
+import java.util.Arrays;
 
 /**
  *
@@ -16,7 +17,6 @@ import java.lang.Exception;
  */
 public class VirtualPet {
 
-   
     final static int LOGIN_ATTEMPTS = 3;
     static int money = 0;
     //1. energy 2. food 3. health
@@ -29,7 +29,6 @@ public class VirtualPet {
      */
     public static void main(String[] args) {
 
-        // TODO code application logic here
         // initialize scanner
         Scanner kb = new Scanner(System.in);
         Random rn = new Random();
@@ -39,7 +38,7 @@ public class VirtualPet {
         boolean startMenu = true;      // default true
         boolean mainMenu = true;        // default true
         boolean choosePet = false;      // default false
-        boolean chooseName = true;      // default true
+        boolean chooseName = false;      // default false
         boolean interactMenu = false;   // default false
         boolean actionMenu = false;     // default false
         boolean play = false;
@@ -48,9 +47,10 @@ public class VirtualPet {
         int actionMenuChoice;
         int interactMenuChoice;
         int gameMenuChoice;
+        String[] id = new String[2];
 
         boolean gameMenu = false;   //default false
-        int petChoice;
+        int petChoice = 0;
         int generateName;
         String petName = "";
 
@@ -65,18 +65,15 @@ public class VirtualPet {
         final int MAX_GUESSES2 = 10;
 
         // constants
-        final String USER = "snoopy";
-        final String PASSWORD = "toto";
         final String CONSONANT = "BCDFGHJKLMNPQRSTVWXYZ";
         final String VOWEL = "AEIOU";
-        
-         
+
         maxStats[0] = rn.nextInt(19) + 1;
         maxStats[1] = rn.nextInt(20 - maxStats[0]) + 1;
         maxStats[2] = 20 - maxStats[1] - maxStats[0];
-        
-        int[] currentStats = new int[3];
-        
+
+        int[] currentStats = Arrays.copyOf(maxStats, 3);
+
         // splash screen
         System.out.println("           boing         boing         boing              ");
         System.out.println(" o-o           . - .         . - .         . - .          ");
@@ -88,12 +85,36 @@ public class VirtualPet {
         System.out.println("WELCOME");
 
         //login
-        String username = loginMenu();
+        loginMenu(id);
+
+        //if login successful, load the information from file
+        try {
+            Scanner input = new Scanner(new File(id[0] + ".dat"));
+            input.nextLine();
+            if (input.hasNextLine()) {
+                petName = input.nextLine();
+                petChoice = input.nextInt();
+                for (int i = 0; i < maxStats.length; i++) {
+                    maxStats[i] = input.nextInt();
+                }
+                for (int i = 0; i < currentStats.length; i++) {
+                    currentStats[i] = input.nextInt();
+                }
+                money = input.nextInt();
+                for (int i = 0; i < interactionCount.length; i++) {
+                    interactionCount[i] = input.nextInt();
+                }
+            }
+            input.close();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "An error occured loading your data! \nTry again.", ":(", JOptionPane.WARNING_MESSAGE);
+        }
 
         while (inPlay) {
 
             // start menu
-            while (mainMenu == true) {
+            while (mainMenu) {
+                // change the menu if it is the first time entering
                 if (startMenu) {
                     System.out.println("\n1. Start\n2. Instructions\n3. Exit");
 
@@ -104,21 +125,24 @@ public class VirtualPet {
                 menuChoice = kb.nextInt();
                 kb.nextLine();
 
+                // menu options
                 switch (menuChoice) {
                     case 1:
                         if (startMenu) {
-                            choosePet = true;
+                            if (petChoice == 0){
+                                choosePet = true;
+                            }
                             startMenu = false;
                         } else {
                             actionMenu = true;
+                            mainMenu = false;
                         }
-                        mainMenu = false;
                         break;
                     case 2:
                         System.out.println("instructions go here");
                         break;
                     case 3:
-                        System.exit(0);
+                        exit(id, petName, petChoice, maxStats, currentStats, money, interactionCount);
                     default:
                         System.out.println("that is not a choice");
                         break;
@@ -133,14 +157,17 @@ public class VirtualPet {
                     case 1:
                         System.out.println("You chose the dilong!");
                         choosePet = false;
+                        chooseName = true;
                         break;
                     case 2:
                         System.out.println("You chose the corythosaurus!");
                         choosePet = false;
+                        chooseName = true;
                         break;
                     case 3:
                         System.out.println("You chose the archaeopteryx!");
                         choosePet = false;
+                        chooseName = true;
                         break;
                     default:
                         System.out.println("Choose a valid pet!");
@@ -152,8 +179,10 @@ public class VirtualPet {
                 generateName = JOptionPane.showConfirmDialog(null, "Would you like to generate a random name?", "almost there...", JOptionPane.YES_NO_OPTION);
                 switch (generateName) {
                     case 1:
-                        JOptionPane.showInputDialog("Enter a name: ");
-                        petName = kb.nextLine();
+                        while (petName.equals("")) {
+                            JOptionPane.showInputDialog("Enter a name: ");
+                            petName = kb.nextLine();
+                        }
                         break;
 
                     // generate random name
@@ -189,7 +218,6 @@ public class VirtualPet {
                 chooseName = false;
 
             }
-
 
             if (actionMenu) {
                 System.out.println("\nWould you like to interact with your pet or play a game?\n1. Interact\n2. Game\n3. Back");
@@ -247,7 +275,7 @@ public class VirtualPet {
                 gameMenu = false;
             }
 
-            // first minigame
+            // minigames
             if (minigame1) {
                 money += guessingGame(MAX_GUESSES1);
                 minigame1 = false;
@@ -257,9 +285,8 @@ public class VirtualPet {
                 minigame2 = false;
                 mainMenu = true;
             }
-            
+
             //interactions
-            
             if (play) {
                 play(currentStats);
                 play = false;
@@ -273,75 +300,78 @@ public class VirtualPet {
         }
     }
 
-    public static void exit(String user){
-        try{
-        File info = new File(user+".dat");
-        PrintWriter pw = new PrintWriter(info);
-        pw.println(); 
-        
-        } catch(Exception e){
-            System.out.println("uhoh");
+    public static void exit(String[] id, String name, int petChoice, int[] maxStats, int[] currentStats, int money, int[] interactionCount) {
+        try {
+            //write important info into the file when exiting
+            File info = new File(id[0] + ".dat");
+            PrintWriter pw = new PrintWriter(info);
+            pw.println(id[1]);
+            pw.println(name);
+            pw.println(petChoice);
+            for (int i : maxStats) {
+                pw.println(i);
+            }
+            for (int i : currentStats) {
+                pw.println(i);
+            }
+            pw.println(money);
+            for (int i : interactionCount) {
+                pw.println(i);
+            }
+            pw.close();
+
+        } catch (Exception e) {
+            System.out.println("An error occured! Your data may not be saved");
         }
         System.exit(0);
-        
+
     }
-    
-    public static String loginMenu() {
+
+    public static void loginMenu(String[] id) { // just move it out of the method atp
         String userInput;
         String passwordInput;
-        String user = "";
         File info;
         PrintWriter pw;
-        
-        for (int i = 1; i <= LOGIN_ATTEMPTS; i++) {
-            if (!user.equals("")) {
-                i = LOGIN_ATTEMPTS + 1;
-            } else {
+
+        while (true) {
+            try {
                 userInput = JOptionPane.showInputDialog("Username: ");
                 userInput = userInput.toLowerCase();
-                info = new File(userInput+".dat");
-                
+                info = new File(userInput + ".dat");
                 //check if file exists
-                if (info.exists()){
+                if (info.exists()) {
                     //if it does, check for password from the file
-                    passwordInput = JOptionPane.showInputDialog("Password: ");
-                    try{
-                        Scanner s = new Scanner(info);
 
-                        if (s.nextLine().equals(passwordInput)){
-                            //upon login, load all the information
-                            user = userInput;
-                            inPlay = true;
-                            JOptionPane.showMessageDialog(null, "Success!", ":)", JOptionPane.INFORMATION_MESSAGE);
-                        }
-                        else {
-                        JOptionPane.showMessageDialog(null, "Invalid credentials!\n" + (LOGIN_ATTEMPTS - i) + " attempts remaining", ":(", JOptionPane.WARNING_MESSAGE);
-                        System.out.println(LOGIN_ATTEMPTS - i + " attempts remaining");
-                        }
-                        s.close();
-                    } catch(Exception e) {
-                        JOptionPane.showMessageDialog(null, "Something went wrong...", ":(", JOptionPane.WARNING_MESSAGE);
-                        return "";
+                    passwordInput = JOptionPane.showInputDialog("Password: ");
+                    Scanner s = new Scanner(info);
+
+                    if (s.nextLine().equals(passwordInput)) {
+                        //allow the user to continue
+                        id[0] = userInput;
+                        id[1] = passwordInput;
+                        inPlay = true;
+                        JOptionPane.showMessageDialog(null, "Success!", ":)", JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Invalid credentials!", ":(", JOptionPane.WARNING_MESSAGE);
                     }
-                }
-                //otherwise, make a new file
-                else{
-                    try{
+                    s.close();
+                } //otherwise, make a new file
+                else {
                     pw = new PrintWriter(info);
                     passwordInput = JOptionPane.showInputDialog("Create a new password: ");
                     pw.println(passwordInput);
                     pw.close();
-                    
-                    } catch(Exception e){
-                        JOptionPane.showMessageDialog(null, "Something went wrong...", ":(", JOptionPane.WARNING_MESSAGE);
-                        return "";
-                    }
+                    id[0] = userInput;
+                    id[1] = passwordInput;
+                    return;
                 }
-                
-                
+
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(null, "Something went wrong...", ":(", JOptionPane.WARNING_MESSAGE);
             }
+
         }
-        return user;
     }
 
     public static int guessingGame(int MAX_GUESSES) {
@@ -350,12 +380,15 @@ public class VirtualPet {
         int money = 0;
         int randomNum = rn.nextInt(100) + 1;
         boolean win = false;
+        
+        System.out.println("Try to guess the correct number between 1 and 100. You will be told whether your guess is less than or greater than the answer.");
         for (int i = MAX_GUESSES; i > 0; i--) {
             System.out.print("Guess a number: ");
             int playerGuess = kb.nextInt();
             if (playerGuess == randomNum) {
                 money += i * 5;
                 System.out.println("Correct! You won with " + (MAX_GUESSES) + " guesses!");
+                System.out.println("You gained " + money + " coins!");
                 i = 0;
                 win = true;
             } else if (playerGuess < randomNum) {
@@ -396,6 +429,7 @@ public class VirtualPet {
             }
         }
         //the game
+        System.out.println("Try to find the matching pairs! Reveal letters by typing two indices, seperated by a space.");
         for (int k = MAX_GUESSES; k > 0; k--) {
             if (!win) {
                 //guessing
@@ -438,7 +472,6 @@ public class VirtualPet {
                     for (int j = 0; j < foundPairs.length(); j++) {
                         if (foundPairs.charAt(j) == shuffled.charAt(i)) {
                             gameStatus += shuffled.charAt(i);
-                            System.out.println(gameStatus);
                         }
                     }
 
@@ -461,7 +494,7 @@ public class VirtualPet {
                 }
             }
         }
-        System.out.println("");
+        System.out.println("you gained " + money + " coins\n");
         return money;
     }
 
@@ -474,10 +507,9 @@ public class VirtualPet {
             stats[0] += 1;
             interactionCount[0] += 1;
             System.out.println("You buy your pet a toy!\n+" + energyGained + " Energy\n -" + COST + " coins");
-        }
-        else if (money < COST){
+        } else if (money < COST) {
             System.out.println("ur too broke");
-        }        
+        }
     }
 
     public static void feed(int[] stats) {
@@ -488,8 +520,7 @@ public class VirtualPet {
             stats[1] += 1;
             interactionCount[1] += 1;
             System.out.println("You feed your pet!\n+" + foodGained + " Energy\n -" + COST + " coins");
-        }
-        else if (money < COST){
+        } else if (money < COST) {
             System.out.println("ur too broke");
         }
     }
@@ -504,5 +535,4 @@ public class VirtualPet {
         System.out.println("You groom your pet!\n+" + healthGained + " Health");
     }
 
-    
 }
